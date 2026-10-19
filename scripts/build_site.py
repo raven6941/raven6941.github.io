@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build index.html from README.md while preserving the site shell and styling."""
+"""Build the Pages artifact's index.html from README.md."""
 
 from html import escape
 from pathlib import Path
@@ -7,7 +7,7 @@ import re
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
-OUTPUT = ROOT / "index.html"
+OUTPUT = ROOT / "_site" / "index.html"
 
 
 def inline_markdown(text: str) -> str:
@@ -82,7 +82,7 @@ def main() -> None:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{escape(title)} — GitHub Pages site.">
   <!-- Replace the content value with the verification token provided by Google Search Console. -->
-  <meta name="google-site-verification" content="REPLACE_WITH_GOOGLE_SEARCH_CONSOLE_TOKEN">
+  <meta name="google-site-verification" content="s5yXInVryalOUDJkF78BsbfnLrKnkE8C4qfPgyCljNY" /> 
   <title>{safe_title}</title>
   <style>
     :root {{ color-scheme: light; --ink: #172326; --muted: #596a69; --accent: #176b61; --paper: #f4f6f1; --panel: #fffefa; }}
@@ -123,6 +123,7 @@ def main() -> None:
 </body>
 </html>
 '''
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(page, encoding="utf-8")
     print(f"Built {OUTPUT.relative_to(ROOT)} from {README.relative_to(ROOT)}")
 
