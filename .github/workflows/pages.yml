@@ -20,11 +20,17 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Build page from README
+      - name: Install Pandoc
+        uses: pandoc/actions/setup@v1
+        with:
+          version: 3.6
+      - name: Convert Markdown files to HTML
         run: python scripts/build_site.py
       - name: Copy static Pages files
         run: cp robots.txt sitemap.xml _site/

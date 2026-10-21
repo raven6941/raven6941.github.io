@@ -4,76 +4,33 @@
 from html import escape
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 OUTPUT = ROOT / "_site" / "index.html"
 
 
-def inline_markdown(text: str) -> str:
-    """Render a small, safe subset of Markdown inline syntax."""
-    rendered = escape(text, quote=False)
-    rendered = re.sub(r"`([^`]+)`", r"<code>\1</code>", rendered)
-    rendered = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", rendered)
-    rendered = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", rendered)
-    rendered = re.sub(
-        r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
-        r'<a href="\2">\1</a>',
-        rendered,
+def render_markdown() -> tuple[str, str]:
+    """Convert README.md to an HTML fragment with Pandoc's GitHub Markdown reader."""
+    markdown = README.read_text(encoding="utf-8")
+    heading = re.search(r"^#\s+(.+?)\s*#*\s*$", markdown, re.MULTILINE)
+    title = heading.group(1) if heading else "raven6941.github.io"
+    title = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", title)
+    title = re.sub(r"[`*_]", "", title).strip()
+    result = subprocess.run(
+        ["pandoc", "--from=gfm", "--to=html5", "--metadata", f"title={title}", str(README)],
+        check=True,
+        capture_output=True,
+        text=True,
     )
-    return rendered
-
-
-def render_markdown(markdown: str) -> tuple[str, str]:
-    lines = markdown.splitlines()
-    title = "raven6941.github.io"
-    blocks: list[str] = []
-    paragraph: list[str] = []
-    list_items: list[str] = []
-
-    def flush_paragraph() -> None:
-        if paragraph:
-            blocks.append(f"<p>{inline_markdown(' '.join(paragraph))}</p>")
-            paragraph.clear()
-
-    def flush_list() -> None:
-        if list_items:
-            blocks.append("<ul>" + "".join(f"<li>{item}</li>" for item in list_items) + "</ul>")
-            list_items.clear()
-
-    for line in lines:
-        if not line.strip():
-            flush_paragraph()
-            flush_list()
-            continue
-
-        heading = re.match(r"^(#{1,6})\s+(.+?)\s*#*\s*$", line)
-        if heading:
-            flush_paragraph()
-            flush_list()
-            level = len(heading.group(1))
-            heading_text = heading.group(2)
-            if level == 1:
-                title = re.sub(r"[`*_]", "", heading_text)
-            blocks.append(f"<h{level}>{inline_markdown(heading_text)}</h{level}>")
-            continue
-
-        item = re.match(r"^\s*[-*+]\s+(.+)$", line)
-        if item:
-            flush_paragraph()
-            list_items.append(inline_markdown(item.group(1)))
-            continue
-
-        flush_list()
-        paragraph.append(line.strip())
-
-    flush_paragraph()
-    flush_list()
-    return title, "\n      ".join(blocks)
+    if "```" in result.stdout:
+        raise RuntimeError("Pandoc left a Markdown code fence unconverted in README.md")
+    return title, result.stdout.strip()
 
 
 def main() -> None:
-    title, content = render_markdown(README.read_text(encoding="utf-8"))
+    title, content = render_markdown()
     safe_title = escape(title)
     page = f'''<!doctype html>
 <html lang="en">
@@ -83,6 +40,7 @@ def main() -> None:
   <meta name="description" content="{escape(title)} — GitHub Pages site.">
   <!-- Replace the content value with the verification token provided by Google Search Console. -->
   <meta name="google-site-verification" content="s5yXInVryalOUDJkF78BsbfnLrKnkE8C4qfPgyCljNY" /> 
+  <meta name="google-site-verification" content="s5yXInVryalOUDJkF78BsbfnLrKnkE8C4qfPgyCljNY" />
   <title>{safe_title}</title>
   <style>
     :root {{ color-scheme: light; --ink: #172326; --muted: #596a69; --accent: #176b61; --paper: #f4f6f1; --panel: #fffefa; }}
